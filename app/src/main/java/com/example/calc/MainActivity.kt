@@ -21,6 +21,8 @@ import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -41,25 +43,35 @@ class MainActivity : AppCompatActivity() {
 
         val nextButton = findViewById<Button>(R.id.button10)
 
-
         mySwitch.setOnCheckedChangeListener { _, isChecked ->
             composeView.setContent {
-                MaterialTheme {
-                    if (isChecked) {
-                        LazyList()
-                    } else {
-                        NormalList()
-                    }
-                }
+                MyApp(isChecked, nextButton)
             }
         }
-
-
     }
 }
 
 @Composable
-fun LazyList() {
+fun MyApp(isChecked: Boolean, nextButton: Button) {
+    // This state holds the index of the currently selected item
+    val selectedItemIndex = remember { mutableStateOf(0) }
+
+    MaterialTheme {
+        if (isChecked) {
+            LazyList(selectedItemIndex)
+        } else {
+            NormalList()
+        }
+    }
+
+    // When the button is pressed, increment selectedItemIndex
+    nextButton.setOnClickListener {
+        selectedItemIndex.value = (selectedItemIndex.value + 1) % 10
+    }
+}
+
+@Composable
+fun LazyList(selectedItemIndex: MutableState<Int>) {
     val stops = listOf(
         Stop("lazy 1", 10),
         Stop("Stop 2", 20),
@@ -72,9 +84,6 @@ fun LazyList() {
         Stop("Stop 9", 90),
         Stop("Stop 10", 100)
     )
-
-    // This state holds the index of the currently selected item
-    val selectedItemIndex = remember { mutableStateOf(0) }
 
     BoxWithConstraints {
         val screenHeight = constraints.maxHeight
@@ -101,14 +110,6 @@ fun LazyList() {
                         )
                     }
                 }
-            }
-
-
-            Button(onClick = {
-                // When the button is pressed, increment selectedItemIndex
-                selectedItemIndex.value = (selectedItemIndex.value + 1) % stops.size
-            }) {
-                Text("mellow")
             }
         }
     }
