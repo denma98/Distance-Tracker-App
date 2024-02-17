@@ -140,31 +140,31 @@
 
     <Switch
         android:id="@+id/switch1"
-        android:layout_width="wrap_content"
+        android:layout_width="110dp"
         android:layout_height="wrap_content"
-        android:layout_marginStart="303dp"
+        android:layout_marginStart="280dp"
         android:layout_marginTop="7dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="697dp"
+        android:layout_marginEnd="2dp"
+        android:layout_marginBottom="810dp"
         android:text="To Miles"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <Switch
-        android:id="@+id/switch2"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="303dp"
-        android:layout_marginTop="383dp"
-        android:layout_marginEnd="20dp"
-        android:layout_marginBottom="321dp"
-        android:text="Lazy?"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+    <!--    <Switch-->
+    <!--        android:id="@+id/switch2"-->
+    <!--        android:layout_width="100dp"-->
+    <!--        android:layout_height="wrap_content"-->
+    <!--        android:layout_marginStart="200dp"-->
+    <!--        android:layout_marginTop="383dp"-->
+    <!--        android:layout_marginEnd="20dp"-->
+    <!--        android:layout_marginBottom="21dp"-->
+    <!--        android:text="Lazy?"-->
+    <!--        app:layout_constraintBottom_toBottomOf="parent"-->
+    <!--        app:layout_constraintEnd_toEndOf="parent"-->
+    <!--        app:layout_constraintStart_toStartOf="parent"-->
+    <!--        app:layout_constraintTop_toTopOf="parent" />-->
 
     <TextView
         android:id="@+id/textView"
@@ -281,10 +281,28 @@
     <androidx.compose.ui.platform.ComposeView
         android:id="@+id/compose_view"
         android:layout_width="match_parent"
-        android:layout_height="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/space_view"
+        android:layout_height="776dp"
+        android:layout_marginBottom="70dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.0"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        tools:layout_editor_absoluteX="22dp"></androidx.compose.ui.platform.ComposeView>
+        app:layout_constraintVertical_bias="1.0">
+
+
+    </androidx.compose.ui.platform.ComposeView>
+
+    <Switch
+        android:id="@+id/switch3"
+        android:layout_width="80dp"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="800dp"
+        android:text="Lazy"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Space
         android:id="@+id/space_view"
