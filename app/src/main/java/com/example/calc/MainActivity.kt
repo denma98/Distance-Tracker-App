@@ -29,7 +29,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.ComposeView
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -47,52 +46,80 @@ class MainActivity : AppCompatActivity() {
 
         val nextButton = findViewById<Button>(R.id.button10)
         val distanceToNextStop = findViewById<TextView>(R.id.textView)
-
+        val lastStop = findViewById<TextView>(R.id.textView7)
+//         totalDistLazy = 626,  1272
+        val distLeft = findViewById<TextView>(R.id.textView10)
+        val distCovered = findViewById<TextView>(R.id.textView8)
         mySwitch.setOnCheckedChangeListener { _, isChecked ->
             composeView.setContent {
-                MyApp(isChecked, nextButton, distanceToNextStop)
+                MyApp(isChecked, nextButton, distanceToNextStop, lastStop, distCovered, distLeft)
             }
         }
     }
 }
 
+@SuppressLint("RememberReturnType", "SetTextI18n")
 @Composable
-fun MyApp(isChecked: Boolean, nextButton: Button, distanceToNextStop: TextView) {
+fun MyApp(isChecked: Boolean, nextButton: Button, distanceToNextStop: TextView, lastStop: TextView, distCovered: TextView, distLeft: TextView) {
     // This state holds the index of the currently selected item
     val selectedItemIndex = remember { mutableIntStateOf(0) }
+    val total: Int=  736;
 
-    val density = LocalDensity.current
+    val stops = listOf(
+        Stop("lazy 1", 10),
+        Stop("Stop 2", 23),
+        Stop("Stop 3", 34),
+        Stop("Stop 4", 47),
+        Stop("Stop 5", 60),
+        Stop("Stop 6", 69),
+        Stop("Stop 7", 84),
+        Stop("Stop 8", 100),
+        Stop("Stop 9", 130),
+        Stop("Stop 10", 169)
+    )
+    val dist = remember { mutableIntStateOf(stops[0].distance) }
+
+    // Now you can access the actual distance of a stop in MyApp
 
     MaterialTheme {
         if (isChecked) {
-            LazyList(selectedItemIndex, distanceToNextStop)
+            LazyList(selectedItemIndex, distanceToNextStop, lastStop, distCovered, dist, stops)
         }
         else {
-            NormalList(selectedItemIndex, distanceToNextStop)
+            NormalList(selectedItemIndex, distanceToNextStop, lastStop, distCovered,dist, stops)
         }
-
     }
 
     // When the button is pressed, increment selectedItemIndex
     nextButton.setOnClickListener {
         selectedItemIndex.intValue = (selectedItemIndex.intValue + 1) % 10
+        dist.intValue += stops[selectedItemIndex.intValue].distance
+        distLeft.text = "${total - dist.intValue} km"
     }
 }
 
+
 @Composable
-fun LazyList(selectedItemIndex: MutableState<Int>, distanceToNextStop: TextView) {
-    val stops = listOf(
-        Stop("lazy 1", 10),
-        Stop("Stop 2", 20),
-        Stop("Stop 3", 30),
-        Stop("Stop 4", 40),
-        Stop("Stop 5", 50),
-        Stop("Stop 6", 60),
-        Stop("Stop 7", 70),
-        Stop("Stop 8", 80),
-        Stop("Stop 9", 90),
-        Stop("Stop 10", 100)
-    )
+fun LazyList(
+    selectedItemIndex: MutableState<Int>,
+    distanceToNextStop: TextView,
+    lastStop: TextView,
+    distCovered: TextView,
+    dist: MutableState<Int>,
+    stops: List<Stop>
+) {
+//    val stops = listOf(
+//        Stop("lazy 1", 10),
+//        Stop("Stop 2", 23),
+//        Stop("Stop 3", 34),
+//        Stop("Stop 4", 47),
+//        Stop("Stop 5", 60),
+//        Stop("Stop 6", 69),
+//        Stop("Stop 7", 84),
+//        Stop("Stop 8", 100),
+//        Stop("Stop 9", 130),
+//        Stop("Stop 10", 169)
+//    )
 
     val listState = rememberLazyListState()
 
@@ -123,13 +150,16 @@ fun LazyList(selectedItemIndex: MutableState<Int>, distanceToNextStop: TextView)
 
                     // Calculate the distance to the next stop
                     if (index == selectedItemIndex.value && index < stops.size - 1) {
+                        val lastStop1 = stops[index]
                         val nextStop = stops[index + 1]
                         val distance = nextStop.distance - stop.distance
 
-                        // Update the TextView on the main thread
+                        // Update the TextViews on the main thread
                         LaunchedEffect(Unit) {
                             withContext(Dispatchers.Main) {
                                 distanceToNextStop.text = "(${nextStop.name}): $distance km"
+                                lastStop.text = "(${lastStop1.name})"
+                                distCovered.text = "${dist.value} km"
                             }
                         }
                     }
@@ -143,21 +173,17 @@ fun LazyList(selectedItemIndex: MutableState<Int>, distanceToNextStop: TextView)
     }
 }
 
-@Composable
-fun NormalList(selectedItemIndex: MutableState<Int>, distanceToNextStop: TextView) {
-    val stops = listOf(
-        Stop("stop 1", 10),
-        Stop("Stop 2", 20),
-        Stop("Stop 3", 30),
-        Stop("Stop 4", 70),
-        Stop("Stop 5", 100),
-        Stop("Stop 6", 110),
-        Stop("Stop 7", 170),
-        Stop("Stop 8", 180),
-        Stop("Stop 9", 290),
-        Stop("Stop 10", 310)
-    )
 
+@SuppressLint("SetTextI18n")
+@Composable
+fun NormalList(
+    selectedItemIndex: MutableState<Int>,
+    distanceToNextStop: TextView,
+    lastStop: TextView,
+    distCovered: TextView,
+    dist: MutableState<Int>,
+    stops: List<Stop>,
+) {
     val scrollState = rememberScrollState()
 
     BoxWithConstraints {
@@ -167,7 +193,7 @@ fun NormalList(selectedItemIndex: MutableState<Int>, distanceToNextStop: TextVie
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(scrollState)
         ) {
             Spacer(modifier = Modifier.height(halfScreenHeight + 100.dp))
             stops.forEachIndexed { index, stop ->
@@ -190,13 +216,18 @@ fun NormalList(selectedItemIndex: MutableState<Int>, distanceToNextStop: TextVie
 
                 // Calculate the distance to the next stop
                 if (index == selectedItemIndex.value && index < stops.size - 1) {
+                    val lastStop1 = stops[index]
                     val nextStop = stops[index + 1]
                     val distance = nextStop.distance - stop.distance
 
-                    // Update the TextView on the main thread
+                    // Update the total distance covered so far
+
+                    // Update the TextViews on the main thread
                     LaunchedEffect(Unit) {
                         withContext(Dispatchers.Main) {
                             distanceToNextStop.text = "(${nextStop.name}): $distance km"
+                            lastStop.text = "(${lastStop1.name})"
+                            distCovered.text = "${dist.value} km"
                         }
                     }
                 }
@@ -204,4 +235,3 @@ fun NormalList(selectedItemIndex: MutableState<Int>, distanceToNextStop: TextVie
         }
     }
 }
-
