@@ -2,6 +2,7 @@ package com.example.calc
 import android.annotation.SuppressLint
 import android.os.Bundle
 import android.widget.Button
+import android.widget.ProgressBar
 import android.widget.Switch
 import android.widget.TextView
 import androidx.appcompat.app.AppCompatActivity
@@ -54,25 +55,37 @@ class MainActivity : AppCompatActivity() {
         val distLeft = findViewById<TextView>(R.id.textView10)
         val distCovered = findViewById<TextView>(R.id.textView8)
         val isMiles = findViewById<Switch>(R.id.switch1)
+        val bar = findViewById<ProgressBar>(R.id.progressBar)
         mySwitch.setOnCheckedChangeListener { _, isChecked ->
             composeView.setContent {
-                MyApp(isChecked, nextButton, distanceToNextStop, lastStop, distCovered, distLeft, isMiles)
+                MyApp(isChecked, nextButton, distanceToNextStop, lastStop, distCovered, distLeft, isMiles, bar)
             }
         }
+
     }
 }
+
+var miles =mutableStateOf(false)
 
 
 
 @SuppressLint("RememberReturnType", "SetTextI18n")
 // ...
 @Composable
-fun MyApp(isChecked: Boolean, nextButton: Button, distanceToNextStop: TextView, lastStop: TextView, distCovered: TextView, distLeft: TextView, @SuppressLint(
-    "UseSwitchCompatOrMaterialCode"
-) isMiles: Switch) {
+fun MyApp(
+    isChecked: Boolean,
+    nextButton: Button,
+    distanceToNextStop: TextView,
+    lastStop: TextView,
+    distCovered: TextView,
+    distLeft: TextView,
+    @SuppressLint(
+        "UseSwitchCompatOrMaterialCode"
+    ) isMiles: Switch,
+    bar: ProgressBar
+) {
     val selectedItemIndex = remember { mutableIntStateOf(0) }
-    val total: Double = 736.0
-    val miles = remember { mutableStateOf(false) }
+
 
     val stops = remember {
         mutableStateListOf(
@@ -88,10 +101,14 @@ fun MyApp(isChecked: Boolean, nextButton: Button, distanceToNextStop: TextView, 
             Stop("Stop 10", 169.0, "km")
         )
     }
+    val total: MutableState<Double> = remember { mutableStateOf(calculateTotalDistance(stops)) }
+
 
     // Store original distances in a separate list
-    val originalDistances = stops.map { it.distance }.toList()
+    var dist = remember { mutableDoubleStateOf(stops[0].distance) }
 
+    val originalDistances = stops.map { it.distance }.toList()
+    total.value = calculateTotalDistance(stops)
     isMiles.setOnCheckedChangeListener { _, isChecked ->
         miles.value = isChecked
         if (isChecked) {
@@ -99,28 +116,42 @@ fun MyApp(isChecked: Boolean, nextButton: Button, distanceToNextStop: TextView, 
                 stop.distance = kmToMiles(originalDistances[index])
                 stop.unit = "miles"
             }
+            dist.doubleValue = kmToMiles(dist.doubleValue)
+            total.value = kmToMiles(total.value)
         } else {
+            miles.value = false
             stops.forEachIndexed { index, stop ->
                 stop.distance = originalDistances[index]
                 stop.unit = "km"
             }
+            dist.doubleValue = milesToKm(dist.doubleValue)
+            total.value = milesToKm(total.value)
         }
+        selectedItemIndex.intValue = selectedItemIndex.intValue
     }
 
-    val dist = remember { mutableDoubleStateOf(stops[0].distance) }
 
     MaterialTheme {
         if (isChecked) {
-            LazyList(selectedItemIndex, distanceToNextStop, lastStop, distCovered, dist, stops, isMiles, distLeft)
+            LazyList(selectedItemIndex, distanceToNextStop, lastStop, distCovered, dist, stops, isMiles, distLeft, miles.value, total.value)
         } else {
-            NormalList(selectedItemIndex, distanceToNextStop, lastStop, distCovered, dist, stops, isMiles, distLeft)
+            NormalList(selectedItemIndex, distanceToNextStop, lastStop, distCovered, dist, stops, isMiles, distLeft, miles.value, total.value)
         }
     }
+
 
     nextButton.setOnClickListener {
         selectedItemIndex.intValue = (selectedItemIndex.intValue + 1) % 10
         dist.doubleValue += stops[selectedItemIndex.intValue].distance
+
+        // Update the progress bar
+        val progress = (dist.doubleValue / total.value * 100).toInt()
+        bar.progress = progress
     }
+}
+
+private fun calculateTotalDistance(stops: List<Stop>): Double {
+    return stops.sumOf { it.distance }
 }
 
 
@@ -134,7 +165,9 @@ fun LazyList(
     dist: MutableState<Double>,
     stops: List<Stop>,
     @SuppressLint("UseSwitchCompatOrMaterialCode") isMiles: Switch,
-    distLeft: TextView
+    distLeft: TextView,
+    value: Boolean,
+    total: Double
 ) {
     val listState = rememberLazyListState()
 
@@ -167,16 +200,22 @@ fun LazyList(
                         val nextStop = stops[index + 1]
                         val distance = nextStop.distance - stop.distance
 
+                        // Convert the distance if necessary
+//                        if (value) {
+//                            distance = kmToMiles(distance)
+//                        }
+
                         // Update the TextViews on the main thread
-                        LaunchedEffect(Unit) {
+                        LaunchedEffect(value) {
                             withContext(Dispatchers.Main) {
-                                distanceToNextStop.text = "(${nextStop.name}): $distance ${nextStop.unit}"
-                                lastStop.text = "(${lastStop1.name})"
+                                distanceToNextStop.text = "${String.format("%.2f", distance)} ${nextStop.unit}"
+                                lastStop.text = "${lastStop1.name}"
                                 distCovered.text = String.format("%.2f ${nextStop.unit}", dist.value)
-                                distLeft.text = String.format("%.2f ${nextStop.unit}", 746 - dist.value)
+                                distLeft.text = String.format("%.2f ${nextStop.unit}", (total) - dist.value)
                             }
                         }
                     }
+
                 }
             }
 
@@ -187,7 +226,7 @@ fun LazyList(
     }
 }
 
-// ...
+
 
 
 fun kmToMiles(kilometers: Double): Double {
@@ -208,13 +247,14 @@ fun NormalList(
     dist: MutableState<Double>,
     stops: List<Stop>,
     @SuppressLint("UseSwitchCompatOrMaterialCode") isMiles: Switch,
-    distLeft: TextView
+    distLeft: TextView,
+    value: Boolean,
+    total: Double
 ) {
     val scrollState = rememberScrollState()
-    val miles = remember { mutableStateOf(false) }
 
     BoxWithConstraints {
-        val screenHeight = constraints.maxHeight/2
+        val screenHeight = constraints.maxHeight / 2
         val halfScreenHeight = 350.dp
 
         Column(
@@ -236,54 +276,33 @@ fun NormalList(
                         .fillMaxWidth()
                 ) {
                     Text(
-                        text = "${stop.name}: ${stop.distance} km",
+                        text = "${stop.name}: ${stop.distance} ${stop.unit}",
                         modifier = Modifier.padding(16.dp)
                     )
                 }
 
                 // Calculate the distance to the next stop
                 if (index == selectedItemIndex.value && index < stops.size - 1) {
+                    val lastStop1 = stops[index]
+                    val nextStop = stops[index + 1]
+                    var distance = nextStop.distance - stop.distance
 
-                    isMiles.setOnCheckedChangeListener { _, isChecked ->
-                        miles.value = isChecked
+                    // Convert the distance if necessary
+//                    if (value) {
+//                        distance = kmToMiles(distance)
+//                    }
 
-                    }
-
-                    if (miles.value) {
-                        val lastStop1 = stops[index]
-                        val nextStop = stops[index + 1]
-                        val distance = kmToMiles(nextStop.distance) - kmToMiles(stop.distance)
-
-                        // Update the TextViews on the main thread
-                        LaunchedEffect(Unit) {
-                            withContext(Dispatchers.Main) {
-                                distanceToNextStop.text = "(${nextStop.name}): ${
-                                    String.format(
-                                        "%.2f miles",
-                                        distance.toFloat()
-                                    )
-                                }"
-
-                                lastStop.text = "(${lastStop1.name})"
-                                distCovered.text = String.format(
-                                    "%.2f miles",
-                                    kmToMiles(dist.value).toFloat()
-                                )
-
-                            }
-                        }
-                    } else {
-                        val lastStop1 = stops[index]
-                        val nextStop = stops[index + 1]
-                        val distance = nextStop.distance - stop.distance
-
-                        // Update the TextViews on the main thread
-                        LaunchedEffect(Unit) {
-                            withContext(Dispatchers.Main) {
-                                distanceToNextStop.text = "(${nextStop.name}): $distance km"
-                                lastStop.text = "(${lastStop1.name})"
-                                distCovered.text = String.format("%.2f km", dist.value.toFloat())
-                                distLeft.text = "${(736 - dist.value)} km"
+                    // Update the TextViews on the main thread
+                    LaunchedEffect(value) { // Use the updated state value
+                        withContext(Dispatchers.Main) {
+                            distanceToNextStop.text = "${String.format("%.2f", distance)} ${nextStop.unit}"
+                            lastStop.text = "${lastStop1.name}"
+                            distCovered.text = String.format("%.2f ${nextStop.unit}", dist.value)
+                            if( value) {
+                                distLeft.text = String.format("%.2f ${nextStop.unit}", (total) - dist.value)
+                            } else {
+                                distLeft.text =
+                                    String.format("%.2f ${nextStop.unit}", (450.12) - dist.value)
                             }
                         }
                     }
@@ -292,5 +311,3 @@ fun NormalList(
         }
     }
 }
-
-
